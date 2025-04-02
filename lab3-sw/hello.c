@@ -11,12 +11,30 @@
 #define BOX_WIDTH 640
 #define BOX_HEIGHT 480
 #define FRAME_TIME_MICROSECONDS 16666   // ~60 FPS (VGA sync)
-#define FRAME_SKIP 15                   // Update ball every 15 frames
-#define SCALE 16                        // High scaling for smooth movement
-#define BALL_SIZE 20                    // Visible ball size
-#define INITIAL_SPEED 1                 // Slow movement speed
+#define FRAME_SKIP 5                    // Update ball every 5 frames
+#define SCALE 4                         // Sub-pixel scaling factor
+#define BALL_SIZE 10                    // Size of the ball in pixels
 
 int vga_ball_fd;
+
+void print_background_color() {
+  vga_ball_arg_t vla;
+  if (ioctl(vga_ball_fd, VGA_BALL_READ_BACKGROUND, &vla)) {
+    perror("ioctl(VGA_BALL_READ_BACKGROUND) failed");
+    return;
+  }
+  printf("Background color: %02x %02x %02x\n",
+         vla.background.red, vla.background.green, vla.background.blue);
+}
+
+void set_background_color(const vga_ball_color_t *c) {
+  vga_ball_arg_t vla;
+  vla.background = *c;
+  if (ioctl(vga_ball_fd, VGA_BALL_WRITE_BACKGROUND, &vla)) {
+    perror("ioctl(VGA_BALL_WRITE_BACKGROUND) failed");
+    return;
+  }
+}
 
 void set_ball_position(unsigned short x, unsigned short y) {
   vga_ball_arg_t vla;
@@ -28,37 +46,54 @@ void set_ball_position(unsigned short x, unsigned short y) {
   }
 }
 
+void get_ball_position(unsigned short *x, unsigned short *y) {
+  vga_ball_arg_t vla;
+  if (ioctl(vga_ball_fd, VGA_BALL_READ_POSITION, &vla)) {
+    perror("ioctl(VGA_BALL_READ_POSITION) failed");
+    return;
+  }
+  *x = vla.pos_x;
+  *y = vla.pos_y;
+}
+
 int main() {
   static const char filename[] = "/dev/vga_ball";
 
-  printf("VGA Ball Demo - Constant Background\n");
+  static const vga_ball_color_t colors[] = {
+    { 0xff, 0x00, 0x00 }, /* Red */
+    { 0x00, 0xff, 0x00 }, /* Green */
+    { 0x00, 0x00, 0xff }, /* Blue */
+    { 0xff, 0xff, 0x00 }, /* Yellow */
+    { 0x00, 0xff, 0xff }, /* Cyan */
+    { 0xff, 0x00, 0xff }, /* Magenta */
+    { 0x80, 0x80, 0x80 }, /* Gray */
+    { 0x00, 0x00, 0x00 }, /* Black */
+    { 0xff, 0xff, 0xff }  /* White */
+  };
+
+#define COLORS 9
+
+  printf("VGA ball Userspace program started\n");
 
   if ((vga_ball_fd = open(filename, O_RDWR)) == -1) {
     fprintf(stderr, "could not open %s\n", filename);
     return -1;
   }
 
-  // Set fixed background color (dark gray)
-  vga_ball_arg_t bg;
-  bg.background.red = 0x30;
-  bg.background.green = 0x30;
-  bg.background.blue = 0x30;
-  if (ioctl(vga_ball_fd, VGA_BALL_WRITE_BACKGROUND, &bg)) {
-    perror("ioctl(VGA_BALL_WRITE_BACKGROUND) failed");
-    return -1;
-  }
-
-  // Initialize position with high precision
-  int x = (BOX_WIDTH / 3) * SCALE;  // Start at 1/3 of screen width
-  int y = (BOX_HEIGHT / 3) * SCALE; // Start at 1/3 of screen height
-  int dx = INITIAL_SPEED * SCALE;
-  int dy = INITIAL_SPEED * SCALE;
+  // Initialize position with sub-pixel precision
+  int x = (BOX_WIDTH / 2) * SCALE;
+  int y = (BOX_HEIGHT / 2) * SCALE;
+  int dx = 2 * SCALE;  // Initial velocity (scaled)
+  int dy = 1 * SCALE;
 
   int frame = 0;
 
   while (1) {
     if (frame % FRAME_SKIP == 0) {
-      // Update position with high precision
+      // Change background color periodically
+      set_background_color(&colors[(frame / FRAME_SKIP) % COLORS]);
+
+      // Update position with sub-pixel precision
       x += dx;
       y += dy;
 
@@ -78,6 +113,7 @@ int main() {
 
       // Set the actual pixel position
       set_ball_position(x / SCALE, y / SCALE);
+      printf("Ball position: (%u, %u)\n", x / SCALE, y / SCALE);
     }
 
     // Maintain frame rate
@@ -86,5 +122,6 @@ int main() {
   }
 
   close(vga_ball_fd);
+  printf("VGA ball Userspace program terminating\n");
   return 0;
 }
