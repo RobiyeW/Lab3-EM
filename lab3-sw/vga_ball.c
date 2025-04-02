@@ -12,7 +12,6 @@
 #include <linux/fs.h>
 #include <linux/uaccess.h>
 #include "vga_ball.h"
-#include <stdio.h>
 
 
 #define DRIVER_NAME "vga_ball"
@@ -52,9 +51,9 @@ static void write_position(unsigned short x, unsigned short y) {
 	iowrite8(y & 0xFF, BALL_Y_L(dev.virtbase));
 	iowrite8((y >> 8) & 0x03, BALL_Y_H(dev.virtbase));
 	dev.ball_x = x;
-	printf("write_position Ball x position: (%u)\n", dev.ball_x );
+	printk("write_position Ball x position: (%u)\n", dev.ball_x );
 	dev.ball_y = y;
-	printf("write_position Ball y position: (%u)\n", dev.ball_y );
+	printk("write_position Ball y position: (%u)\n", dev.ball_y );
 
   }
 
