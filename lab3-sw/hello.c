@@ -11,7 +11,7 @@
 #define BOX_WIDTH 640
 #define BOX_HEIGHT 480
 #define FRAME_TIME_MICROSECONDS 166666   // ~60 FPS (VGA sync)
-#define FRAME_SKIP 5                    // Update ball every 5 frames
+#define FRAME_SKIP 2                    // Update ball every 5 frames
 
 int vga_ball_fd;
 
@@ -36,8 +36,11 @@ void set_background_color(const vga_ball_color_t *c) {
 
 void set_ball_position(unsigned short x, unsigned short y) {
   vga_ball_arg_t vla;
-  vla.pos_x = x;
-  vla.pos_y = y;
+
+  // Clamp coordinates to stay within screen bounds
+  vla.pos_x = (x < BOX_WIDTH) ? x : BOX_WIDTH - 1;
+  vla.pos_y = (y < BOX_HEIGHT) ? y : BOX_HEIGHT - 1;
+
   if (ioctl(vga_ball_fd, VGA_BALL_WRITE_POSITION, &vla)) {
     perror("ioctl(VGA_BALL_WRITE_POSITION) failed");
     return;
@@ -107,26 +110,23 @@ int main() {
   // }
 
   while (1) {
-    // Only update background and ball position every FRAME_SKIP frames
-    if (frame) {
+    if (frame % FRAME_SKIP == 0) {
       set_background_color(&colors[(frame / FRAME_SKIP) % COLORS]);
   
       x += dx;
       y += dy;
   
-      // Bounce off edges (fixed condition)
-      if (x == 0 || x >= BOX_WIDTH) dx = -dx;
-      if (y == 0 || y >= BOX_HEIGHT) dy = -dy;
+      // Corrected bounce conditions
+      if (x == 0 || x >= BOX_WIDTH - 1) dx = -dx;
+      if (y == 0 || y >= BOX_HEIGHT - 1) dy = -dy;
   
       set_ball_position(x, y);
       printf("Ball position: (%u, %u)\n", x, y);
     }
   
-    // Sleep to maintain ~60 FPS (ADD THIS)
     usleep(FRAME_TIME_MICROSECONDS);
     frame++;
   }
-
 
   close(vga_ball_fd);
   return 0;
