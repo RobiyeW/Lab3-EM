@@ -113,6 +113,8 @@ int main() {
   // }
 
   set_ball_position(x, y);
+  set_background_color(&colors[0]);
+
 
 
 
