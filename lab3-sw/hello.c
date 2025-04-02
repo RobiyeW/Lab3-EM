@@ -6,13 +6,15 @@
 #include <fcntl.h>
 #include <string.h>
 #include <unistd.h>
+#include <time.h>
 
-#define SCREEN_WIDTH 150
-#define SCREEN_HEIGHT 150
+#define BOX_WIDTH 150
+#define BOX_HEIGHT 150
+#define FRAME_TIME_MICROSECONDS 16666   // ~60 FPS (VGA sync)
+#define FRAME_SKIP 5                    // Update ball every 5 frames
 
 int vga_ball_fd;
 
-// Read and print the background color
 void print_background_color() {
   vga_ball_arg_t vla;
   if (ioctl(vga_ball_fd, VGA_BALL_READ_BACKGROUND, &vla)) {
@@ -23,7 +25,6 @@ void print_background_color() {
          vla.background.red, vla.background.green, vla.background.blue);
 }
 
-// Set the background color
 void set_background_color(const vga_ball_color_t *c) {
   vga_ball_arg_t vla;
   vla.background = *c;
@@ -33,7 +34,6 @@ void set_background_color(const vga_ball_color_t *c) {
   }
 }
 
-// Set the ball position
 void set_ball_position(unsigned short x, unsigned short y) {
   vga_ball_arg_t vla;
   vla.pos_x = x;
@@ -44,14 +44,14 @@ void set_ball_position(unsigned short x, unsigned short y) {
   }
 }
 
-// Read and print the ball position
-void print_ball_position() {
+void get_ball_position(unsigned short *x, unsigned short *y) {
   vga_ball_arg_t vla;
   if (ioctl(vga_ball_fd, VGA_BALL_READ_POSITION, &vla)) {
     perror("ioctl(VGA_BALL_READ_POSITION) failed");
     return;
   }
-  printf("Ball position: (%u, %u)\n", vla.pos_x, vla.pos_y);
+  *x = vla.pos_x;
+  *y = vla.pos_y;
 }
 
 int main() {
@@ -78,30 +78,34 @@ int main() {
     return -1;
   }
 
-  // Set initial color and center ball
-  set_background_color(&colors[0]);
-  unsigned short x = SCREEN_WIDTH / 2;
-  unsigned short y = SCREEN_HEIGHT / 2;
-  set_ball_position(x, y);
+  unsigned short x = BOX_WIDTH / 2;
+  unsigned short y = BOX_HEIGHT / 2;
+  int dx = 1, dy = 1;
 
-  int dx = 1;
-  int dy = 1;
+  int frame = 0;
 
-  for (int i = 0; i < 500; i++) {
-    // Bounce off edges
-    if (x + dx >= SCREEN_WIDTH || x + dx == 0) dx = -dx;
-    if (y + dy >= SCREEN_HEIGHT || y + dy == 0) dy = -dy;
+  while (1) {
+    // Only update background and ball position every FRAME_SKIP frames
+    if (frame % FRAME_SKIP == 0) {
+      set_background_color(&colors[(frame / FRAME_SKIP) % COLORS]);
 
-    x += dx;
-    y += dy;
+      // Bounce off edges
+      if (x == 0 || x >= BOX_WIDTH - 1) dx = -dx;
+      if (y == 0 || y >= BOX_HEIGHT - 1) dy = -dy;
 
-    set_background_color(&colors[i % COLORS]);
-    set_ball_position(x, y);
-    print_ball_position();
+      x += dx;
+      y += dy;
 
-    usleep(300000); // Slow animation (300 ms)
+      set_ball_position(x, y);
+      get_ball_position(&x, &y);
+      printf("Ball position: (%u, %u)\n", x, y);
+    }
+
+    // Sleep to maintain ~60 FPS
+    usleep(FRAME_TIME_MICROSECONDS);
+    frame++;
   }
 
-  printf("VGA BALL Userspace program terminating\n");
+  close(vga_ball_fd);
   return 0;
 }
