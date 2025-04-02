@@ -5,13 +5,13 @@
 
 typedef struct {
   unsigned char red, green, blue;
-} vga_ball_color_t;
+} __attribute__((packed)) vga_ball_color_t;
 
 typedef struct {
   vga_ball_color_t background;
   unsigned short pos_x; // Ball X position (0–1023)
   unsigned short pos_y; // Ball Y position (0–1023)
-} vga_ball_arg_t;
+} __attribute__((packed)) vga_ball_arg_t;
 
 #define VGA_BALL_MAGIC 'q'
 
