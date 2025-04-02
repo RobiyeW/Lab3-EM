@@ -1,49 +1,29 @@
 #include <stdio.h>
 #include "vga_ball.h"
-#include <sys/ioctl.h>
-#include <sys/types.h>
-#include <sys/stat.h>
 #include <fcntl.h>
-#include <string.h>
 #include <unistd.h>
-#include <time.h>
+#include <sys/ioctl.h>
 
 #define BOX_WIDTH 640
 #define BOX_HEIGHT 480
-#define FRAME_TIME_MICROSECONDS 166666   // ~60 FPS (VGA sync)
-#define FRAME_SKIP 5                    // Update ball every 5 frames
+#define FRAME_TIME_MICROSECONDS 16666   // ~60 FPS
 
 int vga_ball_fd;
-
-void print_background_color() {
-  vga_ball_arg_t vla;
-  if (ioctl(vga_ball_fd, VGA_BALL_READ_BACKGROUND, &vla)) {
-    perror("ioctl(VGA_BALL_READ_BACKGROUND) failed");
-    return;
-  }
-  printf("Background color: %02x %02x %02x\n",
-         vla.background.red, vla.background.green, vla.background.blue);
-}
 
 void set_background_color(const vga_ball_color_t *c) {
   vga_ball_arg_t vla;
   vla.background = *c;
   if (ioctl(vga_ball_fd, VGA_BALL_WRITE_BACKGROUND, &vla)) {
     perror("ioctl(VGA_BALL_WRITE_BACKGROUND) failed");
-    return;
   }
 }
 
 void set_ball_position(unsigned short x, unsigned short y) {
   vga_ball_arg_t vla;
   vla.pos_x = x;
-  printf("Setting Ball x position: (%u)\n", vla.pos_x);
   vla.pos_y = y;
-  printf("Setting Ball y position: (%u)\n", vla.pos_y);
-
   if (ioctl(vga_ball_fd, VGA_BALL_WRITE_POSITION, &vla)) {
     perror("ioctl(VGA_BALL_WRITE_POSITION) failed");
-    return;
   }
 }
 
@@ -54,85 +34,44 @@ void get_ball_position(unsigned short *x, unsigned short *y) {
     return;
   }
   *x = vla.pos_x;
-  printf("Getting Ball x position: (%u)\n", *x );
   *y = vla.pos_y;
-  printf("Getting Ball y position: (%u)\n", *y);
-
 }
 
 int main() {
   static const char filename[] = "/dev/vga_ball";
 
-  static const vga_ball_color_t colors[] = {
-    { 0xff, 0x00, 0x00 }, /* Red */
-    { 0x00, 0xff, 0x00 }, /* Green */
-    { 0x00, 0x00, 0xff }, /* Blue */
-    { 0xff, 0xff, 0x00 }, /* Yellow */
-    { 0x00, 0xff, 0xff }, /* Cyan */
-    { 0xff, 0x00, 0xff }, /* Magenta */
-    { 0x80, 0x80, 0x80 }, /* Gray */
-    { 0x00, 0x00, 0x00 }, /* Black */
-    { 0xff, 0xff, 0xff }  /* White */
-  };
-
-#define COLORS 9
-
-  printf("VGA ball Userspace program started\n");
+  // Use black background
+  static const vga_ball_color_t background = { 0x00, 0x00, 0x00 };
 
   if ((vga_ball_fd = open(filename, O_RDWR)) == -1) {
-    fprintf(stderr, "could not open %s\n", filename);
+    perror("could not open /dev/vga_ball");
     return -1;
   }
 
-  unsigned short x = BOX_WIDTH / 2;
-  unsigned short y = BOX_HEIGHT / 2;
+  set_background_color(&background);
+
+  // Initialize coordinates from driver state
+  unsigned short x, y;
+  get_ball_position(&x, &y);
+
   int dx = 1, dy = 1;
 
-  int frame = 0;
-
-  // while (1) {
-  //   // Only update background and ball position every FRAME_SKIP frames
-  //   set_background_color(&colors[0]);
-
-
-  //   x += dx;
-  //   y += dy;
-
-  //   // Bounce off edges
-  //   if (x == 0 || x >= BOX_WIDTH - 1) dx = -dx;
-  //   if (y == 0 || y >= BOX_HEIGHT - 1) dy = -dy;
-
-
-  //   set_ball_position(x, y);
-  //   // get_ball_position(&x, &y);
-  //   printf("Ball position: (%u, %u)\n", x, y);
-
-  //   // Sleep to maintain ~60 FPS
-  //   // usleep(FRAME_TIME_MICROSECONDS);
-  //   frame++;
-  // }
-
   while (1) {
-    // Only update background and ball position every FRAME_SKIP frames
-    if (frame) {
-      set_background_color(&colors[(frame / FRAME_SKIP) % COLORS]);
-  
-      x += dx;
-      printf(" Ball x position: (%u)\n", x );
-      y += dy;
-      printf(" Ball x position: (%u)\n", y );
-  
-      // Bounce off edges (fixed condition)
-      if (x == 0 || x >= BOX_WIDTH) dx = -dx;
-      if (y == 0 || y >= BOX_HEIGHT) dy = -dy;
-  
-      set_ball_position(x, y);
-      printf("Ball position: (%u, %u)\n", x, y);
-    }
-  
-    // Sleep to maintain ~60 FPS (ADD THIS)
+    // Update position
+    x += dx;
+    y += dy;
+
+    // Bounce
+    if (x == 0 || x >= BOX_WIDTH - 1) dx = -dx;
+    if (y == 0 || y >= BOX_HEIGHT - 1) dy = -dy;
+
+    // Redraw every frame
+    set_ball_position(x, y);
+
+    // For debugging (can be removed to avoid flicker)
+    // printf("Ball position: (%u, %u)\n", x, y);
+
     usleep(FRAME_TIME_MICROSECONDS);
-    frame++;
   }
 
   close(vga_ball_fd);
