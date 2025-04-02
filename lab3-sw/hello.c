@@ -108,7 +108,7 @@ int main() {
 
   while (1) {
     // Only update background and ball position every FRAME_SKIP frames
-    if (frame % FRAME_SKIP == 0) {
+    if (frame) {
       set_background_color(&colors[(frame / FRAME_SKIP) % COLORS]);
   
       x += dx;
