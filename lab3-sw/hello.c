@@ -11,7 +11,7 @@
 #define BOX_WIDTH 640
 #define BOX_HEIGHT 480
 #define FRAME_TIME_MICROSECONDS 16666   // ~60 FPS (VGA sync)
-#define FRAME_SKIP 1                    // Update ball every 5 frames
+#define FRAME_SKIP 10                    // Update ball every 5 frames
 
 int vga_ball_fd;
 
