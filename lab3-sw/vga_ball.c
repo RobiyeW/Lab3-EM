@@ -39,15 +39,19 @@ static void write_background(vga_ball_color_t *background) {
 	dev.background = *background;
 }
 
-// Write ball position to registers
+// Ensure X/Y registers only accept up to 639/479
 static void write_position(unsigned short x, unsigned short y) {
+	// Mask to 10 bits (0-1023), but clamp to VGA resolution
+	x = min(x, (unsigned short)639);  // Add this line
+	y = min(y, (unsigned short)479);  // Add this line
+  
 	iowrite8(x & 0xFF, BALL_X_L(dev.virtbase));
 	iowrite8((x >> 8) & 0x03, BALL_X_H(dev.virtbase));
 	iowrite8(y & 0xFF, BALL_Y_L(dev.virtbase));
 	iowrite8((y >> 8) & 0x03, BALL_Y_H(dev.virtbase));
 	dev.ball_x = x;
 	dev.ball_y = y;
-}
+  }
 
 // Read ball position from memory (optional, reads last written value)
 static void read_position(unsigned short *x, unsigned short *y) {
