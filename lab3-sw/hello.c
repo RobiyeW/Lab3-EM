@@ -48,8 +48,8 @@ int set_ball_position(unsigned short x, unsigned short y) {
   vga_ball_arg_t vla;
 
   // Clamp to valid VGA coordinates (adjust to driver's max)
-  vla.pos_x = (x < VGA_WIDTH) ? x : VGA_WIDTH - 1;
-  vla.pos_y = (y < VGA_HEIGHT) ? y : VGA_HEIGHT - 1;
+  vla.pos_x = (x < BOX_WIDTH) ? x : BOX_WIDTH - 1;
+  vla.pos_y = (y < BOX_HEIGHT) ? y : BOX_HEIGHT - 1;
 
   if (ioctl(vga_ball_fd, VGA_BALL_WRITE_POSITION, &vla)) {
     perror("ioctl(VGA_BALL_WRITE_POSITION) failed");
