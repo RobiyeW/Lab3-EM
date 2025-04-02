@@ -107,7 +107,7 @@ int main() {
     
     print_background_color();
     print_ball_position();
-    usleep(100000); // Smooth motion
+    usleep(500000); // Smooth motion
   }
 
   printf("VGA BALL Userspace program terminating\n");
