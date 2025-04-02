@@ -117,9 +117,9 @@ int main() {
     if (frame) {
       set_background_color(&colors[(frame / FRAME_SKIP) % COLORS]);
   
-      x += dx;
+      //x += dx;
       printf(" Ball x position: (%u)\n", x );
-      y += dy;
+      //y += dy;
       printf(" Ball x position: (%u)\n", y );
   
       // Bounce off edges (fixed condition)
