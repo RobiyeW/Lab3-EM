@@ -84,8 +84,8 @@ int main() {
     return -1;
   }
 
-  unsigned short x = BOX_WIDTH / 2;
-  unsigned short y = BOX_HEIGHT / 2;
+  unsigned short x = 2;
+  unsigned short y = 400;
   int dx = 1, dy = 1;
 
   int frame = 0;
