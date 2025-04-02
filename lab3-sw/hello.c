@@ -37,7 +37,10 @@ void set_background_color(const vga_ball_color_t *c) {
 void set_ball_position(unsigned short x, unsigned short y) {
   vga_ball_arg_t vla;
   vla.pos_x = x;
+  printf("Setting Ball x position: (%u)\n", vla.pos_x);
   vla.pos_y = y;
+  printf("Setting Ball y position: (%u)\n", vla.pos_y);
+
   if (ioctl(vga_ball_fd, VGA_BALL_WRITE_POSITION, &vla)) {
     perror("ioctl(VGA_BALL_WRITE_POSITION) failed");
     return;
@@ -51,7 +54,10 @@ void get_ball_position(unsigned short *x, unsigned short *y) {
     return;
   }
   *x = vla.pos_x;
+  printf("Getting Ball x position: (%u)\n", *x );
   *y = vla.pos_y;
+  printf("Getting Ball y position: (%u)\n", *y);
+
 }
 
 int main() {
@@ -112,7 +118,9 @@ int main() {
       set_background_color(&colors[(frame / FRAME_SKIP) % COLORS]);
   
       x += dx;
+      printf("Getting Ball x position: (%u)\n", x );
       y += dy;
+      printf("Getting Ball x position: (%u)\n", y );
   
       // Bounce off edges (fixed condition)
       if (x == 0 || x >= BOX_WIDTH) dx = -dx;
@@ -126,7 +134,6 @@ int main() {
     usleep(FRAME_TIME_MICROSECONDS);
     frame++;
   }
-
 
   close(vga_ball_fd);
   return 0;
