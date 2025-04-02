@@ -1,146 +1,105 @@
-#include <stdio.h>
-#include "vga_ball.h"
-#include <sys/ioctl.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <fcntl.h>
-#include <string.h>
-#include <unistd.h>
-#include <time.h>
+/*
+ * Userspace program that communicates with the vga_ball device driver
+ * through ioctls
+ *
+ * Stephen A. Edwards
+ * Columbia University
+ * 
+ * Zakiy Manigo ztm2106
+ * Robel Wondwossen rw3043
+ */
 
-#define BOX_WIDTH 640
-#define BOX_HEIGHT 480
-#define FRAME_TIME_MICROSECONDS 1000000   // ~60 FPS (VGA sync)
-#define FRAME_SKIP 1                    // Update ball every 5 frames
-
-int vga_ball_fd;
-
-void print_background_color() {
-  vga_ball_arg_t vla;
-  if (ioctl(vga_ball_fd, VGA_BALL_READ_BACKGROUND, &vla)) {
-    perror("ioctl(VGA_BALL_READ_BACKGROUND) failed");
-    return;
-  }
-  printf("Background color: %02x %02x %02x\n",
-         vla.background.red, vla.background.green, vla.background.blue);
-}
-
-void set_background_color(const vga_ball_color_t *c) {
-  vga_ball_arg_t vla;
-  vla.background = *c;
-  if (ioctl(vga_ball_fd, VGA_BALL_WRITE_BACKGROUND, &vla)) {
-    perror("ioctl(VGA_BALL_WRITE_BACKGROUND) failed");
-    return;
-  }
-}
-
-void set_ball_position(unsigned short x, unsigned short y) {
-  vga_ball_arg_t vla;
-  vla.pos_x = x;
-  printf("Setting Ball x position: (%u)\n", vla.pos_x);
-  vla.pos_y = y;
-  printf("Setting Ball y position: (%u)\n", vla.pos_y);
-
-  if (ioctl(vga_ball_fd, VGA_BALL_WRITE_POSITION, &vla)) {
-    perror("ioctl(VGA_BALL_WRITE_POSITION) failed");
-    return;
-  }
-}
-
-void get_ball_position(unsigned short *x, unsigned short *y) {
-  vga_ball_arg_t vla;
-  if (ioctl(vga_ball_fd, VGA_BALL_READ_POSITION, &vla)) {
-    perror("ioctl(VGA_BALL_READ_POSITION) failed");
-    return;
-  }
-  *x = vla.pos_x;
-  printf("Getting Ball x position: (%u)\n", *x );
-  *y = vla.pos_y;
-  printf("Getting Ball y position: (%u)\n", *y);
-
-}
-
-int main() {
-  static const char filename[] = "/dev/vga_ball";
-
-  static const vga_ball_color_t colors[] = {
-    { 0xff, 0x00, 0x00 }, /* Red */
-    { 0x00, 0xff, 0x00 }, /* Green */
-    { 0x00, 0x00, 0xff }, /* Blue */
-    { 0xff, 0xff, 0x00 }, /* Yellow */
-    { 0x00, 0xff, 0xff }, /* Cyan */
-    { 0xff, 0x00, 0xff }, /* Magenta */
-    { 0x80, 0x80, 0x80 }, /* Gray */
-    { 0x00, 0x00, 0x00 }, /* Black */
-    { 0xff, 0xff, 0xff }  /* White */
-  };
-
-#define COLORS 9
-
-  printf("VGA ball Userspace program started\n");
-
-  if ((vga_ball_fd = open(filename, O_RDWR)) == -1) {
-    fprintf(stderr, "could not open %s\n", filename);
-    return -1;
-  }
-
-  unsigned short x = 2;
-  unsigned short y = 400;
-  int dx = 1, dy = 1;
-
-  int frame = 0;
-
-  // while (1) {
-  //   // Only update background and ball position every FRAME_SKIP frames
-  //   set_background_color(&colors[0]);
-
-
-  //   x += dx;
-  //   y += dy;
-
-  //   // Bounce off edges
-  //   if (x == 0 || x >= BOX_WIDTH - 1) dx = -dx;
-  //   if (y == 0 || y >= BOX_HEIGHT - 1) dy = -dy;
-
-
-  //   set_ball_position(x, y);
-  //   // get_ball_position(&x, &y);
-  //   printf("Ball position: (%u, %u)\n", x, y);
-
-  //   // Sleep to maintain ~60 FPS
-  //   // usleep(FRAME_TIME_MICROSECONDS);
-  //   frame++;
-  // }
-
-  set_ball_position(x, y);
-  set_background_color(&colors[0]);
-
-
-
-
-  while (0) {
-    // Only update background and ball position every FRAME_SKIP frames
-    if (frame) {
-      set_background_color(&colors[(frame / FRAME_SKIP) % COLORS]);
-  
-      //x += dx;
-      printf(" Ball x position: (%u)\n", x );
-      //y += dy;
-      printf(" Ball x position: (%u)\n", y );
-  
-      // Bounce off edges (fixed condition)
-      if (x == 0 || x >= BOX_WIDTH) dx = -dx;
-      if (y == 0 || y >= BOX_HEIGHT) dy = -dy;
-  
-      set_ball_position(x, y);
-      printf("Ball position: (%u, %u)\n", x, y);
-    }
-  
-    // Sleep to maintain ~60 FPS (ADD THIS)
-    usleep(FRAME_TIME_MICROSECONDS);
-    frame++;
-  }
-
-  close(vga_ball_fd);
-  return 0;
-}
+ #include <stdio.h>
+ #include "vga_ball.h"
+ #include <sys/ioctl.h>
+ #include <sys/types.h>
+ #include <sys/stat.h>
+ #include <fcntl.h>
+ #include <string.h>
+ #include <unistd.h>
+ 
+ int vga_ball_fd;
+ 
+ /* Read and print the background color */
+ void print_background_color() {
+   vga_ball_arg_t vla;
+   
+   if (ioctl(vga_ball_fd, VGA_BALL_READ_BACKGROUND, &vla)) {
+       perror("ioctl(VGA_BALL_READ_BACKGROUND) failed");
+       return;
+   }
+   printf("%02x %02x %02x\n",
+    vla.background.red, vla.background.green, vla.background.blue);
+ }
+ 
+ /* Set the background color */
+ void set_background_color(const vga_ball_color_t *c)
+ {
+   vga_ball_arg_t vla;
+   vla.background = *c;
+   if (ioctl(vga_ball_fd, VGA_BALL_WRITE_BACKGROUND, &vla)) {
+       perror("ioctl(VGA_BALL_SET_BACKGROUND) failed");
+       return;
+   }
+ }
+ 
+ int main()
+ {
+   vga_ball_arg_t vla;
+   int i;
+   static const char filename[] = "/dev/vga_ball";
+ 
+   int x = 300;
+   int y = 300;
+ 
+   int vx = 1;
+   int vy = 1;
+   int r = 16;
+   static vga_ball_color_t colors[] = {
+     { 0x00, 0x00, 0x00, 0x9f, 0x00, 0x9f, 0x00, 0x01 }, /* Red */
+     { 0x00, 0xff, 0x00, 0x9f, 0x00, 0x9f, 0x00, 0x01 }, /* Green */
+     { 0x00, 0x00, 0xff, 0x9f, 0x00, 0x9f, 0x00, 0x01 }, /* Blue */
+     { 0xff, 0xff, 0x00, 0x9f, 0x00, 0x9f, 0x00, 0x01 }, /* Yellow */
+     { 0x00, 0xff, 0xff, 0x90, 0x00, 0x9f, 0x00, 0x01 }, /* Cyan */
+     { 0xff, 0x00, 0xff, 0xA0, 0x00, 0x9f, 0x00, 0x01 }, /* Magenta */
+     { 0x80, 0x80, 0x80, 0xB0, 0x00, 0x9f, 0x00, 0x01 }, /* Gray */
+     { 0x00, 0x00, 0x00, 0xC0, 0x00, 0x9f, 0x00, 0x01 }, /* Black */
+     { 0xff, 0xff, 0xff, 0xD0, 0x00, 0x9f, 0x00, 0x01 }  /* White */
+   };
+ 
+ # define COLORS 9
+ 
+   printf("VGA ball Userspace program started\n");
+ 
+   if ( (vga_ball_fd = open(filename, O_RDWR)) == -1) {
+     fprintf(stderr, "could not open %s\n", filename);
+     return -1;
+   }
+ 
+   printf("initial state: ");
+   print_background_color();
+ 
+   while(1){
+     colors[i%COLORS].x_low = x;
+     colors[i%COLORS].x_high = (x >> 5);
+     colors[i%COLORS].y_low = y;
+     colors[i%COLORS].y_high = (y >> 5);
+     colors[i%COLORS].red = r;
+     x+=vx;
+     y+=vy;
+     if(x-r <= 0 || x+r >= 639){
+       vx = -vx;
+       if(r>16) r--;
+     }
+     if(y+r >= 479 || y-r <= 0){
+       vy = -vy;
+       if(r>16) r--;
+     }
+ 
+     set_background_color(&colors[i % COLORS ]);
+     usleep(10000);
+   }
+   printf("VGA BALL Userspace program terminating\n");
+   return 0;
+ }
+ 
