@@ -112,7 +112,11 @@ int main() {
   //   frame++;
   // }
 
-  while (1) {
+  set_ball_position(x, y);
+
+
+
+  while (0) {
     // Only update background and ball position every FRAME_SKIP frames
     if (frame) {
       set_background_color(&colors[(frame / FRAME_SKIP) % COLORS]);
