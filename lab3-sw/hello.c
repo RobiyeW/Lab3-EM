@@ -8,8 +8,8 @@
 #include <unistd.h>
 #include <time.h>
 
-#define BOX_WIDTH 150
-#define BOX_HEIGHT 150
+#define BOX_WIDTH 640
+#define BOX_HEIGHT 480
 #define FRAME_TIME_MICROSECONDS 16666   // ~60 FPS (VGA sync)
 #define FRAME_SKIP 5                    // Update ball every 5 frames
 
