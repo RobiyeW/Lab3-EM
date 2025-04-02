@@ -89,15 +89,17 @@ int main() {
     if (frame % FRAME_SKIP == 0) {
       set_background_color(&colors[(frame / FRAME_SKIP) % COLORS]);
 
-      // Bounce off edges
-      if (x == 0 || x >= BOX_WIDTH - 1) dx = -dx;
-      if (y == 0 || y >= BOX_HEIGHT - 1) dy = -dy;
 
       x += dx;
       y += dy;
 
+      // Bounce off edges
+      if (x == 0 || x >= BOX_WIDTH - 1) dx = -dx;
+      if (y == 0 || y >= BOX_HEIGHT - 1) dy = -dy;
+
+
       set_ball_position(x, y);
-      get_ball_position(&x, &y);
+      // get_ball_position(&x, &y);
       printf("Ball position: (%u, %u)\n", x, y);
     }
 
