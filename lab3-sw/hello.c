@@ -10,8 +10,7 @@
 
 #define BOX_WIDTH 640
 #define BOX_HEIGHT 480
-#define FRAME_TIME_MICROSECONDS 16666   // ~60 FPS (VGA sync)
-#define FRAME_SKIP 1                    // Update ball every 5 frames
+#define FRAME_TIME_MICROSECONDS 16666  // ~60 FPS
 
 int vga_ball_fd;
 
@@ -57,55 +56,56 @@ void get_ball_position(unsigned short *x, unsigned short *y) {
 int main() {
   static const char filename[] = "/dev/vga_ball";
 
-  static const vga_ball_color_t colors[] = {
-    { 0xff, 0x00, 0x00 }, /* Red */
-    { 0x00, 0xff, 0x00 }, /* Green */
-    { 0x00, 0x00, 0xff }, /* Blue */
-    { 0xff, 0xff, 0x00 }, /* Yellow */
-    { 0x00, 0xff, 0xff }, /* Cyan */
-    { 0xff, 0x00, 0xff }, /* Magenta */
-    { 0x80, 0x80, 0x80 }, /* Gray */
-    { 0x00, 0x00, 0x00 }, /* Black */
-    { 0xff, 0xff, 0xff }  /* White */
+  static const vga_ball_color_t background = { 0x00, 0x00, 0x00 }; // black
+  static const vga_ball_color_t bounce_colors[] = {
+    { 0xff, 0x00, 0x00 }, // red
+    { 0x00, 0xff, 0x00 }, // green
+    { 0x00, 0x00, 0xff }, // blue
+    { 0xff, 0xff, 0x00 }, // yellow
+    { 0x00, 0xff, 0xff }, // cyan
+    { 0xff, 0x00, 0xff }, // magenta
+    { 0xff, 0xff, 0xff }, // white
   };
-
-#define COLORS 9
-
-  printf("VGA ball Userspace program started\n");
+  #define NUM_COLORS 7
 
   if ((vga_ball_fd = open(filename, O_RDWR)) == -1) {
     fprintf(stderr, "could not open %s\n", filename);
     return -1;
   }
 
-  unsigned short x = BOX_WIDTH / 2;
-  unsigned short y = BOX_HEIGHT / 2;
+  // Set initial state
+  set_background_color(&background);
+  unsigned short x = BOX_WIDTH / 2, y = BOX_HEIGHT / 2;
   int dx = 1, dy = 1;
-
-  int frame = 0;
+  int color_index = 0;
 
   while (1) {
-    // Only update background and ball position every FRAME_SKIP frames
-    if (frame % FRAME_SKIP == 0) {
-      set_background_color(&colors[(frame / FRAME_SKIP) % COLORS]);
-
-      // Bounce off edges
-      if (x == 0 || x >= BOX_WIDTH - 1) dx = -dx;
-      if (y == 0 || y >= BOX_HEIGHT - 1) dy = -dy;
-
-      x += dx;
-      y += dy;
-
-      set_ball_position(x, y);
-      get_ball_position(&x, &y);
-      printf("Ball position: (%u, %u)\n", x, y);
+    // Bounce logic
+    if (x + dx >= BOX_WIDTH || x + dx <= 0) {
+      dx = -dx;
+      color_index = (color_index + 1) % NUM_COLORS;
+      set_background_color(&bounce_colors[color_index]); // change on wall bounce
+    }
+    if (y + dy >= BOX_HEIGHT || y + dy <= 0) {
+      dy = -dy;
+      color_index = (color_index + 1) % NUM_COLORS;
+      set_background_color(&bounce_colors[color_index]);
     }
 
-    // Sleep to maintain ~60 FPS
-    usleep(FRAME_TIME_MICROSECONDS);
-    frame++;
+    x += dx;
+    y += dy;
+
+    set_ball_position(x, y);
+
+    // Optional: print every 15 frames to avoid slowing it down
+    static int frame = 0;
+    if (++frame % 15 == 0)
+      printf("Ball position: (%u, %u)\n", x, y);
+
+    usleep(FRAME_TIME_MICROSECONDS);  // ~60 FPS
   }
 
   close(vga_ball_fd);
+  printf("VGA ball Userspace program terminating\n");
   return 0;
 }
